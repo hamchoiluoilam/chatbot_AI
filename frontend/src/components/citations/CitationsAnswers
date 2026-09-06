@@ -1,0 +1,76 @@
+import React, { useState } from 'react';
+import { Citation } from '../../types/chat';
+import { CitationBadge } from './CitationBadge';
+import { SourceCard } from './SourceCard';
+import { SourceDrawer } from './SourceDrawer';
+
+interface AnswerWithCitationsProps {
+  content: string;           
+  citations?: Citation[];      
+}
+
+export const AnswerWithCitations: React.FC<AnswerWithCitationsProps> = ({
+  content,
+  citations = [],
+}) => {
+  const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
+
+  // Điều hướng
+  const handleSelectCitation = (citation: Citation) => {
+    setSelectedCitation(citation);
+    // Tự động cuộn mượt tới thẻ nguồn tương ứng
+    const el = document.getElementById(`source-card-${citation.citation_id}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  };
+
+  // Tách văn bản 
+  const parts = content.split(/(\[\[\d+\]\])/g);
+
+  return (
+    <div className="space-y-3">
+      <div className="text-sm leading-relaxed text-slate-800 whitespace-pre-wrap">
+        {parts.map((part, idx) => {
+          const match = part.match(/\[\[(\d+)\]\]/);
+          if (match) {
+            const citeId = parseInt(match[1], 10);
+            const cite = citations.find((c) => c.citation_id === citeId);
+            return (
+              <CitationBadge
+                key={idx}
+                citationId={citeId}
+                citation={cite}
+                onClick={handleSelectCitation}
+              />
+            );
+          }
+          return <span key={idx}>{part}</span>;
+        })}
+      </div>
+
+      {citations.length > 0 && (
+        <div className="pt-2 border-t border-slate-100">
+          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">
+            Nguồn tài liệu tham chiếu ({citations.length}):
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {citations.map((c) => (
+              <SourceCard
+                key={c.citation_id}
+                citation={c}
+                isSelected={selectedCitation?.citation_id === c.citation_id}
+                onSelect={handleSelectCitation}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      <SourceDrawer
+        citation={selectedCitation}
+        onClose={() => setSelectedCitation(null)}
+      />
+    </div>
+  );
+};
